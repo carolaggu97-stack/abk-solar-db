@@ -1,3 +1,10 @@
+-- Borrar en orden inverso a las dependencias
+DROP TABLE IF EXISTS lecturas_produccion;
+DROP TABLE IF EXISTS mantenimiento_tecnicos;
+DROP TABLE IF EXISTS mantenimientos;
+DROP TABLE IF EXISTS tecnicos;
+DROP TABLE IF EXISTS instalacion_equipos;
+DROP TABLE IF EXISTS equipos;
 DROP TABLE IF EXISTS instalaciones;
 DROP TABLE IF EXISTS clientes;
 
@@ -17,4 +24,49 @@ CREATE TABLE instalaciones (
     potencia_kw NUMERIC(8,2),
     fecha_puesta_marcha DATE,
     estado TEXT NOT NULL
+);
+
+CREATE TABLE equipos (
+    id SERIAL PRIMARY KEY,
+    fabricante TEXT NOT NULL,
+    modelo TEXT NOT NULL,
+    categoria TEXT NOT NULL,
+    potencia_w NUMERIC(8,2)
+);
+
+-- Tabla intermedia: muchos a muchos entre instalaciones y equipos
+CREATE TABLE instalacion_equipos (
+    instalacion_id INTEGER NOT NULL REFERENCES instalaciones(id),
+    equipo_id INTEGER NOT NULL REFERENCES equipos(id),
+    cantidad INTEGER NOT NULL,
+    PRIMARY KEY (instalacion_id, equipo_id)
+);
+
+CREATE TABLE tecnicos (
+    id SERIAL PRIMARY KEY,
+    nombre TEXT NOT NULL,
+    especialidad TEXT NOT NULL,
+    email TEXT
+);
+
+CREATE TABLE mantenimientos (
+    id SERIAL PRIMARY KEY,
+    instalacion_id INTEGER NOT NULL REFERENCES instalaciones(id),
+    fecha DATE NOT NULL,
+    tipo TEXT NOT NULL,
+    descripcion TEXT
+);
+
+-- Tabla intermedia: muchos a muchos entre mantenimientos y técnicos
+CREATE TABLE mantenimiento_tecnicos (
+    mantenimiento_id INTEGER NOT NULL REFERENCES mantenimientos(id),
+    tecnico_id INTEGER NOT NULL REFERENCES tecnicos(id),
+    PRIMARY KEY (mantenimiento_id, tecnico_id)
+);
+
+CREATE TABLE lecturas_produccion (
+    id BIGSERIAL PRIMARY KEY,
+    instalacion_id INTEGER NOT NULL REFERENCES instalaciones(id),
+    fecha_hora TIMESTAMP NOT NULL,
+    energia_kwh NUMERIC(10,3) NOT NULL
 );
