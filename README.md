@@ -148,3 +148,18 @@ Lecciones aprendidas:
 
 `04_performance.sql` incluye `VACUUM ANALYZE` y consultas sobre `pg_stat_user_tables` y `pg_stat_user_indexes` para vigilar el tamaño de las tablas, detectar índices que no se usan y comprobar las filas muertas pendientes de limpieza.
 EOF
+
+## Normalización
+
+El diseño está en tercera forma normal (3FN): cada tabla describe una sola entidad y cada columna depende únicamente de su clave primaria. Se mantiene una redundancia intencionada: `facturas.cliente_id` se guarda aunque se pueda deducir de la instalación, porque no todas las facturas tienen instalación asociada y el cliente facturado es un dato legal de la factura.
+
+## Plan de mantenimiento
+
+Tras las migraciones se ejecutó `VACUUM FULL ANALYZE`, que redujo la base de datos de XX MB a XX MB.
+
+Si este sistema estuviera en producción durante años:
+
+- **Autovacuum** activado (valor por defecto) para la limpieza diaria, y revisión mensual de filas muertas e índices sin uso con las consultas de `04_performance.sql`.
+- **`VACUUM FULL`** solo de forma puntual y en horario sin actividad, porque bloquea las tablas.
+- **Copias de seguridad** diarias con `pg_dump`.
+- **Particionar `lecturas_produccion` por año**: es la tabla que más crece (unas 8.760 filas por instalación y año). Con particiones, las consultas de un periodo solo leen su año y los datos antiguos se pueden archivar o eliminar sin afectar al resto.
