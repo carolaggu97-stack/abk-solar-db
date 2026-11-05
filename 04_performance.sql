@@ -1,7 +1,7 @@
 -- =========================================
--- ÍNDICES EN CLAVES FORÁNEAS
--- PostgreSQL no los crea automáticamente,
--- pero se usan en cada JOIN y al borrar filas
+-- INDEXES ON FOREIGN KEYS
+-- PostgreSQL doesn't create them automatically,
+-- but they are used in every JOIN and when deleting rows
 -- =========================================
 
 CREATE INDEX IF NOT EXISTS idx_instalaciones_cliente
@@ -16,27 +16,27 @@ CREATE INDEX IF NOT EXISTS idx_instalacion_equipos_equipo
 CREATE INDEX IF NOT EXISTS idx_mantenimiento_tecnicos_tecnico
     ON mantenimiento_tecnicos (tecnico_id);
 
--- lecturas_produccion.instalacion_id no necesita índice propio:
--- ya está cubierto por lecturas_unicas (instalacion_id, fecha_hora)
+-- lecturas_produccion.instalacion_id doesn't need its own index:
+-- it's already covered by lecturas_unicas (instalacion_id, fecha_hora)
 
 -- =========================================
--- MANTENIMIENTO
+-- MAINTENANCE
 -- =========================================
 
--- Recupera el espacio de filas borradas y actualiza las estadísticas
+-- Reclaims space from deleted rows and updates the statistics
 VACUUM ANALYZE;
 
 -- =========================================
--- MONITORIZACIÓN
+-- MONITORING
 -- =========================================
 
--- Tamaño de cada tabla (datos + índices)
+-- Size of each table (data + indexes)
 SELECT relname AS tabla,
        pg_size_pretty(pg_total_relation_size(relid)) AS tamano_total
 FROM pg_stat_user_tables
 ORDER BY pg_total_relation_size(relid) DESC;
 
--- Cuántas veces se ha usado cada índice
+-- How many times each index has been used
 SELECT relname AS tabla,
        indexrelname AS indice,
        idx_scan AS veces_usado,
@@ -44,7 +44,7 @@ SELECT relname AS tabla,
 FROM pg_stat_user_indexes
 ORDER BY idx_scan;
 
--- Filas muertas y última limpieza de cada tabla
+-- Dead rows and last cleanup of each table
 SELECT relname AS tabla,
        n_live_tup AS filas_vivas,
        n_dead_tup AS filas_muertas,

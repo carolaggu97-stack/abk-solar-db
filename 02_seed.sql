@@ -1,4 +1,4 @@
--- Vaciar las tablas y reiniciar los contadores de id
+-- Empty the tables and reset the id counters
 TRUNCATE lecturas_produccion, mantenimiento_tecnicos, mantenimientos, tecnicos,
          instalacion_equipos, equipos, instalaciones, clientes
 RESTART IDENTITY;
@@ -54,7 +54,7 @@ INSERT INTO mantenimientos (instalacion_id, fecha, tipo, descripcion) VALUES
 INSERT INTO mantenimiento_tecnicos (mantenimiento_id, tecnico_id) VALUES
 (1, 1), (2, 1), (3, 4), (3, 1), (4, 3), (4, 1), (5, 2), (6, 1);
 
--- Lecturas horarias de todo 2025 para las instalaciones fotovoltaicas activas
+-- Hourly readings for all of 2025 for the active solar PV installations
 INSERT INTO lecturas_produccion (instalacion_id, fecha_hora, energia_kwh)
 SELECT
     i.id,

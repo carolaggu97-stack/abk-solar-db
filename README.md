@@ -1,37 +1,39 @@
-# Base de datos de instalaciones solares
+# Solar Installations Database
 
-Base de datos en PostgreSQL para gestionar los proyectos de una empresa instaladora de energía solar, aerotermia y climatización que trabaja en España y Francia: clientes, ubicaciones, instalaciones, equipos, mantenimientos, producción de energía y facturación.
+A PostgreSQL database to manage the projects of a company that installs solar panels, heat pumps and air conditioning in Spain and France: customers, locations, installations, equipment, maintenance, energy production and invoicing.
 
-El diseño se basa en la actividad real del sector, y la estructura de facturación reproduce el formato de una factura real (con datos de ejemplo ficticios).
+The design is based on how the industry actually works, and the invoice structure follows the format of a real invoice (with fictional sample data).
 
-## Cómo ejecutarlo
+Table and column names are in Spanish because the system was designed for a company operating in Spain and France.
+
+## How to run it
 
 ```bash
 createdb abk_solar
-psql -d abk_solar -f 01_schema.sql        # Tablas y claves
-psql -d abk_solar -f 02_seed.sql          # Datos de ejemplo (~43.800 lecturas)
-psql -d abk_solar -f 03_integrity.sql     # Restricciones y roles
-psql -d abk_solar -f 04_performance.sql   # Índices, mantenimiento y monitorización
-psql -d abk_solar -f 05_normalization.sql # Migración: tabla de ubicaciones
-psql -d abk_solar -f 06_facturas.sql      # Migración: facturas y líneas
+psql -d abk_solar -f 01_schema.sql        # Tables and keys
+psql -d abk_solar -f 02_seed.sql          # Sample data (~43,800 readings)
+psql -d abk_solar -f 03_integrity.sql     # Constraints and roles
+psql -d abk_solar -f 04_performance.sql   # Indexes, maintenance and monitoring
+psql -d abk_solar -f 05_normalization.sql # Migration: locations table
+psql -d abk_solar -f 06_facturas.sql      # Migration: invoices and invoice lines
 ```
 
-## Diagrama entidad-relación
+## Entity-relationship diagram
 
 ```mermaid
 erDiagram
-    CLIENTES ||--o{ UBICACIONES : tiene
-    UBICACIONES ||--o{ INSTALACIONES : alberga
-    INSTALACIONES ||--o{ INSTALACION_EQUIPOS : incluye
-    EQUIPOS ||--o{ INSTALACION_EQUIPOS : "se usa en"
-    INSTALACIONES ||--o{ MANTENIMIENTOS : recibe
-    MANTENIMIENTOS ||--o{ MANTENIMIENTO_TECNICOS : asigna
-    TECNICOS ||--o{ MANTENIMIENTO_TECNICOS : realiza
-    INSTALACIONES ||--o{ LECTURAS_PRODUCCION : genera
-    CLIENTES ||--o{ FACTURAS : recibe
-    INSTALACIONES |o--o{ FACTURAS : "se factura en"
-    FACTURAS ||--o{ LINEAS_FACTURA : contiene
-    EQUIPOS |o--o{ LINEAS_FACTURA : "aparece en"
+    CLIENTES ||--o{ UBICACIONES : has
+    UBICACIONES ||--o{ INSTALACIONES : hosts
+    INSTALACIONES ||--o{ INSTALACION_EQUIPOS : includes
+    EQUIPOS ||--o{ INSTALACION_EQUIPOS : "used in"
+    INSTALACIONES ||--o{ MANTENIMIENTOS : receives
+    MANTENIMIENTOS ||--o{ MANTENIMIENTO_TECNICOS : assigns
+    TECNICOS ||--o{ MANTENIMIENTO_TECNICOS : performs
+    INSTALACIONES ||--o{ LECTURAS_PRODUCCION : generates
+    CLIENTES ||--o{ FACTURAS : receives
+    INSTALACIONES |o--o{ FACTURAS : "billed in"
+    FACTURAS ||--o{ LINEAS_FACTURA : contains
+    EQUIPOS |o--o{ LINEAS_FACTURA : "appears in"
 
     CLIENTES {
         int id PK
@@ -111,55 +113,67 @@ erDiagram
     }
 ```
 
-## Decisiones de diseño
+### Main tables
 
-- **Las tecnologías van en los equipos, no en la instalación.** Una misma instalación puede combinar placas fotovoltaicas y una bomba de calor sin duplicar registros.
-- **Normalización de direcciones.** En el diseño inicial, una casa con dos instalaciones repetía su dirección. La migración `05_normalization.sql` la mueve a la tabla `ubicaciones` dentro de una transacción, para que cada dato viva en un solo sitio y no pueda contradecirse.
-- **El precio se guarda en cada línea de factura.** No se toma del catálogo, porque una factura emitida debe conservar el precio del día aunque el catálogo cambie.
-- **Los totales se calculan con vistas.** `v_facturas_totales` calcula bruto, IVA y total a partir de las líneas, de modo que nunca pueden quedar desincronizados. Cada factura guarda su porcentaje de IVA para que un cambio futuro del tipo no altere las facturas antiguas. Cada línea se redondea antes de sumar, igual que en la factura real.
+| Table | What it stores |
+|---|---|
+| `clientes` | Customers |
+| `ubicaciones` | Addresses where installations are located |
+| `instalaciones` | Installations (power, start-up date, status) |
+| `equipos` | Equipment catalogue (panels, inverters, heat pumps…) |
+| `tecnicos` | Technicians |
+| `mantenimientos` | Maintenance visits |
+| `lecturas_produccion` | Hourly energy production readings |
+| `facturas` / `lineas_factura` | Invoices and invoice lines |
 
-## Integridad
+## Design decisions
 
-- Restricciones `CHECK` para los valores permitidos (tipos de cliente, estados, categorías, formas de pago) y para valores imposibles (potencias negativas, vencimientos anteriores a la fecha de la factura).
-- Restricciones `UNIQUE` para emails, modelos de equipo, numeración de facturas por serie y lecturas duplicadas.
-- `ON DELETE CASCADE` solo en las lecturas de producción. En el resto, PostgreSQL impide borrar un registro que tiene datos dependientes.
-- **Roles según el principio de mínimo privilegio, alineados con el RGPD:**
-  - `analista`: solo lectura de todas las tablas.
-  - `tecnico`: ve instalaciones, ubicaciones y equipos, y registra mantenimientos, pero no tiene acceso a los datos personales de los clientes ni a la facturación.
+- **Technologies belong to the equipment, not to the installation.** A single installation can combine solar panels and a heat pump without duplicating records.
+- **Address normalization.** In the first design, a house with two installations repeated its address. The `05_normalization.sql` migration moves addresses into the `ubicaciones` table inside a transaction, so each piece of data lives in one place and can't contradict itself.
+- **The price is stored on each invoice line.** It isn't taken from the catalogue, because an issued invoice must keep the price of that day even if the catalogue changes.
+- **Totals are calculated with views.** `v_facturas_totales` calculates the subtotal, VAT and total from the invoice lines, so they can never get out of sync. Each invoice stores its own VAT rate, so a future change in the rate won't alter old invoices. Each line is rounded before adding them up, just like on the real invoice.
 
-## Rendimiento
+## Integrity
 
-Consulta de prueba: producción total de todas las instalaciones el 21 de junio de 2025, sobre 43.800 lecturas horarias.
+- `CHECK` constraints for allowed values (customer types, statuses, categories, payment methods) and for impossible values (negative power, due dates earlier than the invoice date).
+- `UNIQUE` constraints for emails, equipment models, invoice numbering per series and duplicate readings.
+- `ON DELETE CASCADE` only on production readings. Everywhere else, PostgreSQL prevents deleting a record that has dependent data.
+- **Roles based on the principle of least privilege, in line with the GDPR:**
+  - `analista` (analyst): read-only access to all tables.
+  - `tecnico` (technician): can see installations, locations and equipment, and record maintenance, but has no access to customers' personal data or to invoicing.
 
-| Situación | Plan de ejecución | Bloques leídos | Tiempo |
+## Performance
+
+Test query: total production of all installations on 21 June 2025, over 43,800 hourly readings.
+
+| Situation | Execution plan | Blocks read | Time |
 |---|---|---|---|
-| Sin índices | Seq Scan: lee 43.800 filas y descarta 43.680 | 323 | 8,84 ms |
-| Con índice | Index Scan: accede directamente a las 120 filas | 23 | 0,23 ms |
+| Without indexes | Seq Scan: reads 43,800 rows and discards 43,680 | 323 | 8.84 ms |
+| With index | Index Scan: goes straight to the 120 rows | 23 | 0.23 ms |
 
-Resultado: unas **40 veces más rápida** con el índice.
+Result: about **40 times faster** with the index.
 
-Lecciones aprendidas:
+Lessons learned:
 
-- El índice creado automáticamente por `UNIQUE (instalacion_id, fecha_hora)` ya servía para filtrar solo por fecha gracias al *skip scan* de PostgreSQL 18.
-- Se creó un índice adicional solo por fecha, pero `EXPLAIN ANALYZE` mostró que el planificador no lo usaba. Se eliminó, porque un índice sin uso ocupa espacio y ralentiza las inserciones.
-- PostgreSQL no indexa automáticamente las claves foráneas, así que `04_performance.sql` añade índices en todas las que se usan en `JOIN`.
+- The index created automatically by `UNIQUE (instalacion_id, fecha_hora)` could already be used to filter by date alone, thanks to *skip scan* in PostgreSQL 18.
+- An extra index on the date alone was created, but `EXPLAIN ANALYZE` showed that the planner didn't use it. It was removed, because an unused index takes up space and slows down inserts.
+- PostgreSQL doesn't index foreign keys automatically, so `04_performance.sql` adds indexes on all the ones used in `JOIN`s.
 
-## Mantenimiento y monitorización
+## Maintenance and monitoring
 
-`04_performance.sql` incluye `VACUUM ANALYZE` y consultas sobre `pg_stat_user_tables` y `pg_stat_user_indexes` para vigilar el tamaño de las tablas, detectar índices que no se usan y comprobar las filas muertas pendientes de limpieza.
-EOF
+`04_performance.sql` includes `VACUUM ANALYZE` and queries on `pg_stat_user_tables` and `pg_stat_user_indexes` to keep an eye on table sizes, find unused indexes and check dead rows waiting to be cleaned up.
 
-## Normalización
+## Normalization
 
-El diseño está en tercera forma normal (3FN): cada tabla describe una sola entidad y cada columna depende únicamente de su clave primaria. Se mantiene una redundancia intencionada: `facturas.cliente_id` se guarda aunque se pueda deducir de la instalación, porque no todas las facturas tienen instalación asociada y el cliente facturado es un dato legal de la factura.
+The design is in third normal form (3NF): each table describes a single entity and each column depends only on its primary key. One redundancy is kept on purpose: `facturas.cliente_id` is stored even though it could be worked out from the installation, because not every invoice is linked to an installation, and the billed customer is a legal part of the invoice.
 
-## Plan de mantenimiento
+## Maintenance plan
 
-Tras las migraciones se ejecutó `VACUUM FULL ANALYZE`, que redujo la base de datos de XX MB a XX MB.
+After the migrations, `VACUUM FULL ANALYZE` was run, which reduced the database from XX MB to XX MB.
 
-Si este sistema estuviera en producción durante años:
+If this system were in production for years:
 
-- **Autovacuum** activado (valor por defecto) para la limpieza diaria, y revisión mensual de filas muertas e índices sin uso con las consultas de `04_performance.sql`.
-- **`VACUUM FULL`** solo de forma puntual y en horario sin actividad, porque bloquea las tablas.
-- **Copias de seguridad** diarias con `pg_dump`.
-- **Particionar `lecturas_produccion` por año**: es la tabla que más crece (unas 8.760 filas por instalación y año). Con particiones, las consultas de un periodo solo leen su año y los datos antiguos se pueden archivar o eliminar sin afectar al resto.
+- **Autovacuum** turned on (the default) for daily cleanup, plus a monthly review of dead rows and unused indexes with the queries in `04_performance.sql`.
+- **`VACUUM FULL`** only occasionally and outside working hours, because it locks the tables.
+- Daily **backups** with `pg_dump`.
+- **Partition `lecturas_produccion` by year**: it's the fastest-growing table (about 8,760 rows per installation per year). With partitions, queries for a period only read that year, and old data can be archived or deleted without affecting the rest.

@@ -1,5 +1,5 @@
 -- =========================================
--- RESTRICCIONES: solo se aceptan datos válidos
+-- CONSTRAINTS: only valid data is accepted
 -- =========================================
 
 ALTER TABLE clientes
@@ -34,14 +34,14 @@ ALTER TABLE lecturas_produccion
     ADD CONSTRAINT lecturas_energia_check CHECK (energia_kwh >= 0),
     ADD CONSTRAINT lecturas_unicas UNIQUE (instalacion_id, fecha_hora);
 
--- Si se borra una instalación, se borran también sus lecturas
+-- If an installation is deleted, its readings are deleted too
 ALTER TABLE lecturas_produccion
     DROP CONSTRAINT lecturas_produccion_instalacion_id_fkey,
     ADD CONSTRAINT lecturas_produccion_instalacion_id_fkey
         FOREIGN KEY (instalacion_id) REFERENCES instalaciones(id) ON DELETE CASCADE;
 
 -- =========================================
--- ROLES: quién puede hacer qué
+-- ROLES: who can do what
 -- =========================================
 
 DO $$
@@ -55,11 +55,11 @@ BEGIN
 END
 $$;
 
--- Analista: puede leer todo, pero no cambiar nada
+-- Analyst: can read everything, but can't change anything
 GRANT SELECT ON ALL TABLES IN SCHEMA public TO analista;
 
--- Técnico: ve las instalaciones y sus equipos, y registra mantenimientos,
--- pero NO puede ver los datos personales de los clientes
+-- Technician: sees installations and their equipment, and records maintenance,
+-- but CANNOT see customers' personal data
 GRANT SELECT ON instalaciones, equipos, instalacion_equipos, tecnicos TO tecnico;
 GRANT SELECT, INSERT, UPDATE ON mantenimientos, mantenimiento_tecnicos TO tecnico;
 GRANT USAGE ON SEQUENCE mantenimientos_id_seq TO tecnico;

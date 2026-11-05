@@ -1,4 +1,4 @@
--- Borrar en orden inverso a las dependencias
+-- Drop in reverse order of dependencies
 DROP TABLE IF EXISTS lecturas_produccion;
 DROP TABLE IF EXISTS mantenimiento_tecnicos;
 DROP TABLE IF EXISTS mantenimientos;
@@ -34,7 +34,7 @@ CREATE TABLE equipos (
     potencia_w NUMERIC(8,2)
 );
 
--- Tabla intermedia: muchos a muchos entre instalaciones y equipos
+-- Join table: many-to-many between installations and equipment
 CREATE TABLE instalacion_equipos (
     instalacion_id INTEGER NOT NULL REFERENCES instalaciones(id),
     equipo_id INTEGER NOT NULL REFERENCES equipos(id),
@@ -57,7 +57,7 @@ CREATE TABLE mantenimientos (
     descripcion TEXT
 );
 
--- Tabla intermedia: muchos a muchos entre mantenimientos y técnicos
+-- Join table: many-to-many between maintenance visits and technicians
 CREATE TABLE mantenimiento_tecnicos (
     mantenimiento_id INTEGER NOT NULL REFERENCES mantenimientos(id),
     tecnico_id INTEGER NOT NULL REFERENCES tecnicos(id),
