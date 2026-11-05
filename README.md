@@ -9,13 +9,13 @@ Table and column names are in Spanish because the system was designed for a comp
 ## How to run it
 
 ```bash
-createdb abk_solar
-psql -d abk_solar -f 01_schema.sql        # Tables and keys
-psql -d abk_solar -f 02_seed.sql          # Sample data (~43,800 readings)
-psql -d abk_solar -f 03_integrity.sql     # Constraints and roles
-psql -d abk_solar -f 04_performance.sql   # Indexes, maintenance and monitoring
-psql -d abk_solar -f 05_normalization.sql # Migration: locations table
-psql -d abk_solar -f 06_facturas.sql      # Migration: invoices and invoice lines
+createdb solar_installations
+psql -d solar_installations -f 01_schema.sql        # Tables and keys
+psql -d solar_installations -f 02_seed.sql          # Sample data (~43,800 readings)
+psql -d solar_installations -f 03_integrity.sql     # Constraints and roles
+psql -d solar_installations -f 04_performance.sql   # Indexes, maintenance and monitoring
+psql -d solar_installations -f 05_normalization.sql # Migration: locations table
+psql -d solar_installations -f 06_facturas.sql      # Migration: invoices and invoice lines
 ```
 
 ## Entity-relationship diagram
@@ -169,7 +169,7 @@ The design is in third normal form (3NF): each table describes a single entity a
 
 ## Maintenance plan
 
-After the migrations, `VACUUM FULL ANALYZE` was run, which reduced the database from XX MB to XX MB.
+After the migrations, `VACUUM FULL ANALYZE` was run to reclaim the space left behind by the migrated columns and update the planner statistics.
 
 If this system were in production for years:
 
